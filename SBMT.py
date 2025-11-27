@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, colorchooser
 import screeninfo
 from pynput import keyboard
 import threading
@@ -10,6 +10,7 @@ import sys
 selected_monitors = []  # 选中的显示器列表
 mask_windows = []  # 遮罩窗口列表
 current_alpha = None  # 不透明度(0-100)
+current_color = None  # 遮罩颜色（十六进制，如#000000）
 monitor_check_vars = []  # 显示器复选框变量
 listener = None  # 快捷键监听器
 root = None  # 主窗口（全局化，用于子线程UI更新）
@@ -50,6 +51,50 @@ def get_monitors():
         sys.exit(1)
 
 
+# 更新所有遮罩窗口的颜色
+def update_mask_color():
+    """实时更新已生成遮罩的颜色"""
+    color = current_color.get()
+    for win in mask_windows:
+        try:
+            win.configure(bg=color)
+            win.update_idletasks()  # 立即刷新UI
+        except Exception as e:
+            print(f"更新遮罩颜色失败: {e}")
+
+
+# 验证十六进制颜色格式是否有效
+def is_valid_hex_color(color):
+    if len(color) != 7 or not color.startswith("#"):
+        return False
+    try:
+        int(color[1:], 16)  # 验证后6位是十六进制数
+        return True
+    except ValueError:
+        return False
+
+
+# 颜色输入框更新处理
+def entry_update_color(event=None):
+    color = current_color.get().strip()
+    if is_valid_hex_color(color):
+        update_mask_color()
+    else:
+        messagebox.showwarning("提示", "请输入正确格式的十六进制颜色（如#000000）！")
+        current_color.set("#000000")  # 恢复默认黑色
+
+
+# 打开颜色选择器
+def choose_color():
+    color = colorchooser.askcolor(
+        title="选择遮罩颜色",
+        initialcolor=current_color.get()
+    )[1]  # 获取十六进制颜色值（第二个返回值）
+    if color:  # 用户未取消选择
+        current_color.set(color)
+        update_mask_color()
+
+
 # 生成遮罩窗口
 def create_mask_windows():
     close_mask_windows()
@@ -65,6 +110,7 @@ def create_mask_windows():
         return
 
     alpha = current_alpha.get()
+    color = current_color.get()
     for monitor in selected_monitors:
         mask = tk.Toplevel()
         mask.title("")
@@ -72,7 +118,7 @@ def create_mask_windows():
         mask.overrideredirect(True)
         mask.attributes("-topmost", True)
         mask.resizable(False, False)
-        mask.configure(bg="black")
+        mask.configure(bg=color)  # 使用自定义颜色
 
         mask.update_idletasks()
         hwnd = ctypes.windll.user32.GetParent(mask.winfo_id())
@@ -175,13 +221,15 @@ def start_hotkey_listener():
 
 # 构建主界面
 def build_ui(main_root):
-    global current_alpha, entry_alpha, root
+    global current_alpha, current_color, entry_alpha, root
     root = main_root  # 全局化主窗口
 
+    # 初始化变量
     current_alpha = tk.DoubleVar(value=50)
+    current_color = tk.StringVar(value="#000000")  # 默认黑色
 
     root.title("显示器遮罩工具")
-    root.geometry("450x400")
+    root.geometry("450x480")  # 调整窗口高度以容纳颜色设置
     root.resizable(False, False)
 
     # 居中窗口
@@ -234,7 +282,26 @@ def build_ui(main_root):
                            font=("微软雅黑", 9), foreground="#666666")
     lbl_hotkey.pack(anchor=tk.W, padx=5, pady=2)
 
-    # 3. 功能按钮区域
+    # 3. 遮罩颜色选择区域（新增）
+    frame_color = ttk.LabelFrame(root, text="遮罩颜色设置", padding=(10, 5))
+    frame_color.pack(fill=tk.X, padx=20, pady=10)
+
+    frame_color_input = ttk.Frame(frame_color)
+    frame_color_input.pack(fill=tk.X, padx=5, pady=5)
+
+    ttk.Label(frame_color_input, text="十六进制颜色：").pack(side=tk.LEFT, padx=5)
+    entry_color = ttk.Entry(frame_color_input, textvariable=current_color,
+                           font=("微软雅黑", 10), width=15)
+    entry_color.pack(side=tk.LEFT, padx=5)
+    entry_color.bind("<Return>", entry_update_color)  # 回车确认颜色
+
+    btn_color_choose = ttk.Button(frame_color_input, text="选择颜色", command=choose_color)
+    btn_color_choose.pack(side=tk.LEFT, padx=5)
+
+    # btn_color_confirm = ttk.Button(frame_color_input, text="确认颜色", command=entry_update_color)
+    # btn_color_confirm.pack(side=tk.LEFT, padx=5)
+
+    # 4. 功能按钮区域
     frame_btn = ttk.Frame(root, padding=(10, 5))
     frame_btn.pack(fill=tk.X, padx=20, pady=10)
 
