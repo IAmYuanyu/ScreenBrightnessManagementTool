@@ -12,5 +12,7 @@
 pip install -r requirements.txt
 ~~~
 
+或者使用PyCharm自动下载所需库
+
 作者的Python版本为3.12
 
