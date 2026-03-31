@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(cargo check:*)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 44368 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 44368 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; cd ''g:/!Temp/ScreenBrightnessManagementTool/2.0/ScreenManager''; npm run tauri dev 2>&1 | head -100\")",
+      "Bash(pip install:*)",
+      "Bash(python -m pip install --upgrade pip setuptools -q)",
+      "Bash(python -c \"import flask; import flask_cors; import screeninfo; import pynput; print\\(''All packages available''\\)\")",
+      "Bash(timeout 10 python backend.py)"
+    ]
+  }
+}
